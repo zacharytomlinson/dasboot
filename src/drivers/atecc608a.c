@@ -437,7 +437,7 @@ bool atecc608a_is_configured_for_pubkey_slot(atecc608a_t *dev, uint8_t pubkey_sl
 
 bool atecc608a_configure_default(atecc608a_t *dev)
 {
-    // Mirrors the bundled `HardwareRng::configure_chip()` behavior in `atecca.h`:
+    // Provisioning helper for a SparkFun-style default config:
     // - write SparkFun-style config for slot 0/1
     // - lock config
     // - generate a new keypair in slot 0

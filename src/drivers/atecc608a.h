@@ -46,7 +46,7 @@ bool atecc608a_get_lock_status(atecc608a_t *dev, atecc608a_lock_status_t *out);
 
 bool atecc608a_is_slot_locked(const atecc608a_lock_status_t *st, uint8_t slot);
 
-// Optional provisioning helpers (mirrors the bundled `atecca.cpp` behavior).
+// Optional provisioning helpers (SparkFun-style default config + permanent lock).
 bool atecc608a_is_configured_default(atecc608a_t *dev);
 bool atecc608a_configure_default(atecc608a_t *dev);
 
