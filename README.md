@@ -23,15 +23,15 @@ cmake --build --preset avr-ninja
 ### Manual
 
 ```bash
-cmake -S . -B build-fw -G Ninja \
+cmake -S . -B build-avr-ninja -G Ninja \
   -DCMAKE_TOOLCHAIN_FILE=cmake/avr-gcc-toolchain.cmake \
   -DMCU=atmega4808 -DF_CPU=20000000UL
-cmake --build build-fw
+cmake --build build-avr-ninja
 ```
 
 Outputs:
-- `build-fw/dasboot` (ELF)
-- `build-fw/dasboot.hex` and `build-fw/dasboot.bin`
+- `build-avr-ninja/dasboot` (ELF)
+- `build-avr-ninja/dasboot.hex` and `build-avr-ninja/dasboot.bin`
 
 ## Pin Mapping
 
@@ -48,8 +48,8 @@ Current bring-up expects the ATECC to be provisioned/locked with the **firmware 
 
 There is an optional one-time provisioning firmware target (`atecc_provision`) that mirrors the legacy Arduino flow (write config, lock config, generate slot0 keypair, lock data+slot0). **Locking is permanent.**
 
-- Build: `cmake --build build-fw --target atecc_provision`
-- Flash `build-fw/atecc_provision.hex` (same UPDI method as the bootloader)
+- Build: `cmake --build build-avr-ninja --target atecc_provision`
+- Flash `build-avr-ninja/atecc_provision.hex` (same UPDI method as the bootloader)
 - Enable actual provisioning with: `-DATECC_PROVISION_ENABLE=1` (otherwise it will only blink error code **4** on unprovisioned devices)
 
 Note: this legacy provisioning does **not** write the firmware verification public key into slot 8; it only mirrors the previous “generate per-device keypair in slot 0” behavior.
@@ -59,10 +59,10 @@ Note: this legacy provisioning does **not** write the firmware verification publ
 Example (adjust the serial port and programmer):
 
 ```bash
-cmake -S . -B build-fw -G Ninja \
+cmake -S . -B build-avr-ninja -G Ninja \
   -DCMAKE_TOOLCHAIN_FILE=cmake/avr-gcc-toolchain.cmake \
   -DAVRDUDE_PORT=/dev/ttyACM0 -DAVRDUDE_PROGRAMMER=serialupdi
-cmake --build build-fw --target flash
+cmake --build build-avr-ninja --target flash
 ```
 
 Note: placing the image in the bootloader section and configuring fuses will be handled once the final memory map is decided.
