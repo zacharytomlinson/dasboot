@@ -1,7 +1,7 @@
 # Minimal AVR-GCC toolchain file for CMake.
 #
 # Usage:
-#   cmake -S firmware -B build-fw -DCMAKE_TOOLCHAIN_FILE=firmware/cmake/avr-gcc-toolchain.cmake
+#   cmake -S . -B build-fw -DCMAKE_TOOLCHAIN_FILE=cmake/avr-gcc-toolchain.cmake
 #   cmake --build build-fw
 
 set(CMAKE_SYSTEM_NAME Generic)
@@ -27,4 +27,3 @@ set(CMAKE_CXX_FLAGS_INIT "${AVR_MCU_FLAGS} -DF_CPU=${F_CPU} -Os -ffunction-secti
 set(CMAKE_ASM_FLAGS_INIT "${AVR_MCU_FLAGS}")
 
 set(CMAKE_EXE_LINKER_FLAGS_INIT "${AVR_MCU_FLAGS} -Wl,--gc-sections")
-

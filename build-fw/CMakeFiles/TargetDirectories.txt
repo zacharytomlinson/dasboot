@@ -1,5 +1,0 @@
-/home/arch/CLionProjects/dasboot/build-fw/CMakeFiles/dasboot.dir
-/home/arch/CLionProjects/dasboot/build-fw/CMakeFiles/atecc_provision.dir
-/home/arch/CLionProjects/dasboot/build-fw/CMakeFiles/flash.dir
-/home/arch/CLionProjects/dasboot/build-fw/CMakeFiles/edit_cache.dir
-/home/arch/CLionProjects/dasboot/build-fw/CMakeFiles/rebuild_cache.dir

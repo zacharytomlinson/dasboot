@@ -1,0 +1,42 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "avr-ninja",
+      "displayName": "AVR (Ninja)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-avr-ninja",
+      "toolchainFile": "${sourceDir}/cmake/avr-gcc-toolchain.cmake",
+      "cacheVariables": {
+        "MCU": "atmega4808",
+        "F_CPU": "20000000UL",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "avr-make",
+      "displayName": "AVR (Unix Makefiles)",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build-avr-make",
+      "toolchainFile": "${sourceDir}/cmake/avr-gcc-toolchain.cmake",
+      "cacheVariables": {
+        "MCU": "atmega4808",
+        "F_CPU": "20000000UL",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "avr-ninja",
+      "configurePreset": "avr-ninja"
+    },
+    {
+      "name": "avr-make",
+      "configurePreset": "avr-make"
+    }
+  ]
+}
+

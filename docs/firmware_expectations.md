@@ -20,7 +20,7 @@ Expected layout:
 
 - `0x0000..0x0FFF`: BOOT section (bootloader)
 - `0x1000..0x10FF`: APPCODE vector trampoline (installed by bootloader build)
-- `0x1100..`: application vectors + code (`APP_START_ADDR` in `firmware/src/boot_contract.h`)
+- `0x1100..`: application vectors + code (`APP_START_ADDR` in `src/boot_contract.h`)
 
 Fuse expectation:
 
@@ -40,7 +40,7 @@ Application build expectation:
 ## W25Q A/B Slot Model
 
 - Two slots: **A** and **B**. Exactly one is “confirmed/current”.
-- Slot sizing and base addresses must match the bootloader build-time constants (see `firmware/src/boot_contract.h`), notably `W25_SLOT_SIZE`, `W25_SLOT_A_BASE`, and `W25_SLOT_B_BASE`.
+- Slot sizing and base addresses must match the bootloader build-time constants (see `src/boot_contract.h`), notably `W25_SLOT_SIZE`, `W25_SLOT_A_BASE`, and `W25_SLOT_B_BASE`.
 - Default layout: slot A base `0x000000`, slot B base `0x010000` (64 KiB each).
 - Each slot contains:
   - a small **slot header** at the slot base address
@@ -57,7 +57,7 @@ Recommended slot header fields (written in little-endian unless noted):
 - `image_len` (32-bit, raw bytes)
 - `image_version` or `sequence` (32-bit monotonic)
 - `sig_rs[64]` (raw `R(32)||S(32)`, each 32-byte **big-endian**)
-- `header_crc16` (16-bit) over header bytes excluding the CRC itself, computed **as if `state == READY`** (use the shared CRC implementation in `firmware/src/crc16.h`)
+- `header_crc16` (16-bit) over header bytes excluding the CRC itself, computed **as if `state == READY`** (use the shared CRC implementation in `src/crc16.h`)
 
 Commit rule: the header should be written such that it can be made valid **only at the end** (e.g., write `state=READY` last, or write `magic` last).
 
@@ -72,7 +72,7 @@ The application writes a small EEPROM struct that the bootloader reads at reset:
 - `flags`:
   - `APPLY_PENDING`: app requests bootloader to apply `pending_slot`
   - `WAIT_CONFIRM`: bootloader has applied an update and is waiting for the app to confirm
-- `eeprom_crc16` (use the shared CRC implementation in `firmware/src/crc16.h`)
+- `eeprom_crc16` (use the shared CRC implementation in `src/crc16.h`)
 
 CRC init: this project uses `crcval=0x0000` as the initial value (matches the running firmware).
 
