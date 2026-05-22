@@ -6,7 +6,8 @@
 
 void w25q_pins_init(void)
 {
-    gpio_high(W25Q_CS_PORT, W25Q_CS_bm);
+    PORTD.OUTSET = W25Q_RESET_bm | W25Q_CS_bm | W25Q_WP_bm;
+    PORTD.DIRSET = W25Q_RESET_bm | W25Q_CS_bm | W25Q_WP_bm;
 }
 
 static inline void w25q_select(void)

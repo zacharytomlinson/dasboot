@@ -38,11 +38,11 @@ Outputs:
 Defaults live in `src/board.h` and are meant to match your schematic.
 
 - SPI0 pins (current board): `PA4=MOSI`, `PA5=MISO`, `PA6=SCK`, `PA7=SS`
-- W25Qxx: CS on `PD2`
+- W25Qxx: `/HOLD`/`/RESET` on `PD1`, CS on `PD2`, `/WP` on `PD3`
 - STAT LED: `PD0`
 - ATECC608A: I2C via TWI0 (adjust `TWI0_PORTMUX_ROUTE_SEL` in `src/board.h`)
 
-Current bring-up expects the ATECC to be provisioned/locked with the **firmware verification public key stored in slot 8**. If it is not, the firmware blinks error code **4**.
+Current bring-up expects the ATECC to be provisioned/locked with the **firmware verification public key stored in ATECC slot 13**. If W25Q probing, slot validation, flash programming, or verification fails, the STAT LED emits the corresponding fatal blink code.
 
 ## ATECC Provisioning (Optional)
 
@@ -52,7 +52,25 @@ There is an optional one-time provisioning firmware target (`atecc_provision`) t
 - Flash `build-avr-ninja/atecc_provision.hex` (same UPDI method as the bootloader)
 - Enable actual provisioning with: `-DATECC_PROVISION_ENABLE=1` (otherwise it will only blink error code **4** on unprovisioned devices)
 
-Note: this legacy provisioning does **not** write the firmware verification public key into slot 8; it only mirrors the previous “generate per-device keypair in slot 0” behavior.
+Note: this legacy provisioning does **not** write the firmware verification public key into slot 13; it only mirrors the previous “generate per-device keypair in slot 0” behavior. Current factory provisioning is handled by the application repo flasher/provisioner flow.
+
+## Runtime Behavior
+
+On reset, DasBoot probes W25Q, reads the EEPROM handoff state, and either boots the app, applies a pending slot, or restores the confirmed slot after repeated unconfirmed boots.
+
+- `APPLY_PENDING`: verify the pending W25Q slot, program internal flash from it, set `WAIT_CONFIRM`, then jump to the app.
+- `WAIT_CONFIRM`: increment attempts and jump to the app. After 3 unconfirmed attempts, restore the confirmed slot and clear pending state.
+- No pending flags: jump directly to the app through the trampoline.
+
+Candidate verification streams `SHA-256(image bytes)` through the ATECC SHA engine and verifies the raw 64-byte ECDSA `R||S` signature with ATECC `Verify(Stored)` using slot 13.
+
+Fatal STAT LED blink codes currently used by `src/main.c`:
+
+- `3`: W25Q probe failed.
+- `4`: pending slot header could not be read.
+- `5`: pending slot verification or programming failed and rollback path could not recover cleanly.
+- `6`: confirmed-slot restore/programming failed.
+- `7`: confirmed slot header could not be read for rollback.
 
 ## Flashing (UPDI)
 

@@ -2,7 +2,7 @@
 
 This document describes what the main application firmware must do (and must **not** do) to work with the bootloader design:
 
-- Bootloader verifies candidate images using **ATECC608A stored public key in slot 8**.
+- Bootloader verifies candidate images using **ATECC608A stored public key slot 13**.
 - Bootloader uses **W25Q** as an **A/B staging + rollback** store.
 - Bootloader is responsible for keeping rollback possible (both slots usable).
 
@@ -47,7 +47,7 @@ Application build expectation:
   - the raw firmware image bytes immediately following the header
 - The firmware image is verified as:
   1) `SHA-256(image bytes)` computed by ATECC SHA engine (streamed)
-  2) `ECDSA verify` of that digest using **stored public key slot 8** and a 64-byte raw signature `R||S`
+  2) `ECDSA verify` of that digest using **ATECC608A stored public key slot 13** and a 64-byte raw signature `R||S`
 
 Recommended slot header fields (written in little-endian unless noted):
 - `magic` (32-bit)
@@ -105,13 +105,13 @@ On successful startup (after the bootloader has applied the update), the applica
 
 ## W25Q128JVP Erase/Write Notes (SPI)
 
-This repo assumes a **W25Q128JVP** and uses **64 KiB slots** so the application can erase efficiently using 64 KiB blocks.
+This repo assumes a **W25Q128JVP-compatible** flash and uses **64 KiB slots**. The current application staging path erases only the 4 KiB sectors needed for the slot header plus image bytes.
 
 Recommended staging sequence for a slot:
 
-1) **Erase** the entire slot region:
+1) **Erase** the required slot region:
    - `WREN` (0x06)
-   - `Block Erase 64KB` (0xD8) at `slot_base` (must be 64 KiB-aligned: `0x000000`, `0x010000`, …)
+   - `Sector Erase 4KB` (0x20) for each 4 KiB sector covering `slot_base..slot_base + sizeof(slot_header_t) + image_len`
    - Poll `RDSR1` (0x05) `WIP` bit until cleared.
 
 2) **Program** the image bytes at `slot_base + sizeof(slot_header_t)`:
@@ -125,7 +125,18 @@ Recommended staging sequence for a slot:
    - Write all header fields with `state=STAGING` (or not-READY).
    - Finally rewrite the header with `state=READY` and a valid `header_crc16` (so power-loss can’t produce a “READY” header by accident).
 
-If you ever need partial erase (e.g., header only), use `Sector Erase 4KB` (0x20) instead of `0xD8`, but keep slot layout constants aligned with the bootloader (`W25_SLOT_*`).
+Whole-slot `Block Erase 64KB` (0xD8) is still compatible with the slot alignment, but it is not required by the current application staging path. Keep slot layout constants aligned with the bootloader (`W25_SLOT_*`).
+
+## Board Control Pins
+
+Current board assumptions shared with the application firmware:
+
+- W25Q CS: `PD2`.
+- W25Q `/HOLD`/`/RESET`: `PD1`, driven high before flash access.
+- W25Q `/WP`: `PD3`, driven high before flash access.
+- STAT LED: `PD0`.
+
+The bootloader initializes these pins before probing W25Q so the flash and shared SPI bus start from a sane idle state.
 
 ## Common Pain Points (Firmware Side)
 
@@ -140,7 +151,7 @@ If you ever need partial erase (e.g., header only), use `Sector Erase 4KB` (0x20
 
 ## Bootloader Responsibilities (For Reference)
 
-- If `pending_slot` is set and slot header is `READY`, verify signature via ATECC slot 8 and program internal flash.
+- If `pending_slot` is set and slot header is `READY`, verify signature via ATECC `Verify(Stored)` using slot 13 and program internal flash.
 - Maintain rollback: if `pending_confirm` remains set across boots or `attempts` exceeds a limit, re-flash internal from `confirmed_slot`.
 - Ensure at least one valid slot remains `CONFIRMED` (bootloader may copy the running internal image into W25 when needed to re-establish A/B redundancy).
 

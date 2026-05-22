@@ -14,8 +14,12 @@
 #define SPI0_PORTMUX_ROUTE_SEL 0
 
 // W25Qxx control pins
+#define W25Q_RESET_PORT (&PORTD)
+#define W25Q_RESET_bm PIN1_bm
 #define W25Q_CS_PORT (&PORTD)
 #define W25Q_CS_bm PIN2_bm
+#define W25Q_WP_PORT (&PORTD)
+#define W25Q_WP_bm PIN3_bm
 
 // Status LED ("STAT")
 #define STAT_LED_PORT (&PORTD)

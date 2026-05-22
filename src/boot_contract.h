@@ -32,11 +32,15 @@ _Static_assert((APP_START_ADDR % PROGMEM_PAGE_SIZE) == 0, "APP_START_ADDR must a
 // W25Q A/B layout. These bases and sizes must match what the application uses.
 // Placing them at 0 and SLOT_SIZE keeps address math simple.
 #ifndef W25_SLOT_SIZE
-#define W25_SLOT_SIZE (64u * 1024u) // 64 KiB per slot (aligned to 64 KiB block erase)
+#define W25_SLOT_SIZE (64ul * 1024ul) // 64 KiB per slot (aligned to 64 KiB block erase)
 #endif
 
 #define W25_SLOT_A_BASE (0ul)
 #define W25_SLOT_B_BASE ((uint32_t)W25_SLOT_SIZE)
+
+#ifndef FW_ATECC_PUBKEY_SLOT
+#define FW_ATECC_PUBKEY_SLOT 13u
+#endif
 
 // Slot header format (must match the main firmware).
 #define SLOT_MAGIC 0x57464247ul // "GBFW" little-endian

@@ -16,8 +16,8 @@
 static void fatal_blink(uint8_t code)
 {
     for (;;) {
-        status_led_blink_blocking(code, 120, 120);
-        status_led_blink_blocking(1, 400, 400);
+        status_led_blink_blocking(code, 6, 6);
+        status_led_blink_blocking(1, 20, 20);
     }
 }
 
@@ -32,7 +32,7 @@ static bool program_app_from_slot(uint8_t slot, const slot_header_t *hdr)
 {
     uint8_t page[PROGMEM_PAGE_SIZE];
     uint32_t src = slot_image_base(slot);
-    uint16_t dst = APP_START_ADDR;
+    uint32_t dst = APP_START_ADDR;
     uint16_t remaining = (uint16_t)hdr->image_len;
 
     while (remaining) {
@@ -49,16 +49,9 @@ static bool program_app_from_slot(uint8_t slot, const slot_header_t *hdr)
             return false;
         }
 
-        // Verify readback via mapped flash.
-        volatile const uint8_t *flash = (volatile const uint8_t *)(MAPPED_PROGMEM_START + dst);
-        for (uint16_t i = 0; i < PROGMEM_PAGE_SIZE; i++) {
-            if (flash[i] != page[i]) {
-                return false;
-            }
-        }
 
         src += take;
-        dst = (uint16_t)(dst + PROGMEM_PAGE_SIZE);
+        dst += PROGMEM_PAGE_SIZE;
         remaining = (uint16_t)(remaining - take);
     }
 
@@ -77,9 +70,8 @@ static bool program_app_from_slot_and_verify(uint8_t slot, const slot_header_t *
 
     uint8_t page[PROGMEM_PAGE_SIZE];
     uint32_t src = slot_image_base(slot);
-    uint16_t dst = APP_START_ADDR;
+    uint32_t dst = APP_START_ADDR;
     uint16_t remaining = (uint16_t)hdr->image_len;
-
     while (remaining) {
         uint16_t take = (remaining > PROGMEM_PAGE_SIZE) ? (uint16_t)PROGMEM_PAGE_SIZE : (uint16_t)remaining;
 
@@ -127,14 +119,14 @@ static bool program_app_from_slot_and_verify(uint8_t slot, const slot_header_t *
         }
 
         src += take;
-        dst = (uint16_t)(dst + PROGMEM_PAGE_SIZE);
+        dst += PROGMEM_PAGE_SIZE;
         remaining = (uint16_t)(remaining - take);
     }
 
     if (!atecc608a_bl_sha_end(ATECC608A_I2C_ADDR_DEFAULT, tail, tail_len, digest)) {
         return false;
     }
-    if (!atecc608a_bl_verify_stored_awake(ATECC608A_I2C_ADDR_DEFAULT, 8, digest, hdr->sig_rs)) {
+    if (!atecc608a_bl_verify_stored_awake(ATECC608A_I2C_ADDR_DEFAULT, FW_ATECC_PUBKEY_SLOT, digest, hdr->sig_rs)) {
         (void)atecc608a_bl_sleep(ATECC608A_I2C_ADDR_DEFAULT);
         return false;
     }
@@ -151,7 +143,7 @@ int main(void)
 
     w25q_pins_init();
 
-    status_led_blink_blocking(1, 80, 80);
+    status_led_blink_blocking(1, 4, 4);
 
     if (!w25q_probe()) {
         fatal_blink(3);
@@ -164,7 +156,6 @@ int main(void)
     // allow it to boot a few times. If it never confirms, roll back.
     if ((st.flags & BOOTF_WAIT_CONFIRM) != 0) {
         if (st.attempts >= 3) {
-            // Roll back to confirmed slot.
             slot_header_t hdr;
             if (!slot_read_header(st.confirmed_slot, &hdr)) {
                 fatal_blink(7);
@@ -196,7 +187,6 @@ int main(void)
         }
 
         if (!program_app_from_slot_and_verify(st.pending_slot, &hdr)) {
-            // Candidate invalid or programming failed; roll back to confirmed slot.
             slot_header_t rh;
             if (!slot_read_header(st.confirmed_slot, &rh)) {
                 fatal_blink(7);

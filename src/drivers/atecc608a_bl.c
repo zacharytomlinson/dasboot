@@ -7,6 +7,7 @@
 enum {
     WORD_ADDR_COMMAND = 0x03,
     WORD_ADDR_SLEEP = 0x01,
+    WORD_ADDR_IDLE = 0x02,
 };
 
 enum { OPCODE_NONCE = 0x16, OPCODE_VERIFY = 0x45, OPCODE_SHA = 0x47 };
@@ -48,7 +49,7 @@ static bool atecc_cmd(uint8_t i2c_addr, uint8_t opcode, uint8_t param1, uint16_t
                       uint8_t data_len)
 {
     // [word][count][opcode][p1][p2l][p2h][data...][crc0][crc1]
-    uint8_t tx[1u + 1u + 1u + 1u + 2u + 64u + 2u];
+    uint8_t tx[1u + 1u + 1u + 1u + 2u + 128u + 2u];
 
     uint8_t count = (uint8_t)(1u + 1u + 1u + 2u + data_len + 2u);
     uint8_t total = (uint8_t)(1u + count);
@@ -88,6 +89,12 @@ bool atecc608a_bl_sleep(uint8_t i2c_addr)
     return twi0_write(i2c_addr, &b, 1);
 }
 
+bool atecc608a_bl_idle(uint8_t i2c_addr)
+{
+    uint8_t b = WORD_ADDR_IDLE;
+    return twi0_write(i2c_addr, &b, 1);
+}
+
 static bool atecc_status_ok(uint8_t i2c_addr, uint8_t delay_ms)
 {
     while (delay_ms--) {
@@ -100,29 +107,37 @@ static bool atecc_status_ok(uint8_t i2c_addr, uint8_t delay_ms)
     return resp[1] == 0x00;
 }
 
-bool atecc608a_bl_sha_start(uint8_t i2c_addr)
+static bool atecc_sha_status(uint8_t i2c_addr, uint8_t param1, uint16_t param2, const uint8_t *data,
+                              uint8_t data_len)
 {
     if (!atecc608a_bl_wake(i2c_addr)) {
         return false;
     }
-
-    if (!atecc_cmd(i2c_addr, OPCODE_SHA, SHA_START, 0, 0, 0)) {
+    if (!atecc_cmd(i2c_addr, OPCODE_SHA, param1, param2, data, data_len)) {
         return false;
     }
-    return atecc_status_ok(i2c_addr, 9);
+    if (!atecc_status_ok(i2c_addr, 9)) {
+        return false;
+    }
+    return atecc608a_bl_idle(i2c_addr);
+}
+
+bool atecc608a_bl_sha_start(uint8_t i2c_addr)
+{
+    return atecc_sha_status(i2c_addr, SHA_START, 0, 0, 0);
 }
 
 bool atecc608a_bl_sha_update64(uint8_t i2c_addr, const uint8_t data[64])
 {
-    if (!atecc_cmd(i2c_addr, OPCODE_SHA, SHA_UPDATE, 64, data, 64)) {
-        return false;
-    }
-    return atecc_status_ok(i2c_addr, 9);
+    return atecc_sha_status(i2c_addr, SHA_UPDATE, 64, data, 64);
 }
 
 bool atecc608a_bl_sha_end(uint8_t i2c_addr, const uint8_t *data, uint8_t len, uint8_t digest[32])
 {
     if (len > 63) {
+        return false;
+    }
+    if (!atecc608a_bl_wake(i2c_addr)) {
         return false;
     }
     if (!atecc_cmd(i2c_addr, OPCODE_SHA, SHA_END, len, data, len)) {
@@ -137,26 +152,31 @@ bool atecc608a_bl_sha_end(uint8_t i2c_addr, const uint8_t *data, uint8_t len, ui
     for (uint8_t i = 0; i < 32; i++) {
         digest[i] = resp[1 + i];
     }
-    return true;
+    return atecc608a_bl_idle(i2c_addr);
 }
 
 bool atecc608a_bl_verify_stored_awake(uint8_t i2c_addr, uint8_t key_slot, const uint8_t digest[32],
                                       const uint8_t sig_rs[64])
 {
     // Load TempKey with digest using NONCE passthrough (32 bytes).
+    if (!atecc608a_bl_wake(i2c_addr)) {
+        return false;
+    }
     if (!atecc_cmd(i2c_addr, OPCODE_NONCE, NONCE_MODE_PASSTHROUGH, 0, digest, 32)) {
         return false;
     }
     if (!atecc_status_ok(i2c_addr, 7)) {
         return false;
     }
+    if (!atecc608a_bl_idle(i2c_addr)) {
+        return false;
+    }
 
-    // VERIFY stored: data is signature (64), param2 is key slot.
+    if (!atecc608a_bl_wake(i2c_addr)) {
+        return false;
+    }
     if (!atecc_cmd(i2c_addr, OPCODE_VERIFY, VERIFY_MODE_STORED, key_slot, sig_rs, 64)) {
         return false;
     }
-    if (!atecc_status_ok(i2c_addr, 60)) {
-        return false;
-    }
-    return true;
+    return atecc_status_ok(i2c_addr, 60);
 }

@@ -38,16 +38,16 @@ void status_led_toggle(void)
     STAT_LED_PORT->OUTTGL = STAT_LED_bm;
 }
 
-void status_led_blink_blocking(uint8_t times, uint16_t on_ms, uint16_t off_ms)
+void status_led_blink_blocking(uint8_t times, uint8_t on_ticks, uint8_t off_ticks)
 {
     for (uint8_t i = 0; i < times; i++) {
         status_led_set(true);
-        for (uint16_t on = on_ms; on > 0; on--) {
-            _delay_ms(1);
+        for (uint8_t on = on_ticks; on > 0; on--) {
+            _delay_ms(20);
         }
         status_led_set(false);
-        for (uint16_t off = off_ms; off > 0; off--) {
-            _delay_ms(1);
+        for (uint8_t off = off_ticks; off > 0; off--) {
+            _delay_ms(20);
         }
     }
 }
